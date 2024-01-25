@@ -12,7 +12,7 @@ var session = require('express-session');
 // const authMiddleware = require('./server/config/authMiddleware');
 
 // Import the routes module
-const routes = require('../backend/routes.js');
+const routes = require('./routes.js');
 
 
 const storage = multer.diskStorage({

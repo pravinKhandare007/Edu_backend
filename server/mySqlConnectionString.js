@@ -4,7 +4,7 @@ var mySqlConnectionString = {
         dev: {
             host: 'localhost',
             user: 'root',
-            password: 'root',
+            password: 'Pravin@7258',
             database: 'education_app_db1',
             port: '3306'
             // host: process.env.HOSTNAME,
@@ -16,7 +16,7 @@ var mySqlConnectionString = {
         qu: {
             host: 'localhost',
             user: 'root',
-            password: 'root',
+            password: 'Pravin@7258',
             database: 'education_app_db1',
             port: '3306'
         }
