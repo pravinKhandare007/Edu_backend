@@ -261,5 +261,96 @@ router.post('/create-course', async (req, res) => {
   }
 });
 
+router.post('/save-course', async (req, res) => {
+  console.log('Received request to /api/save-course');
+  try {
+    await userDao.newSaveCourse(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+router.get('/fetch-sidebar-data', async (req, res) => {
+  console.log('Received request to /api/fetch sidebar data');
+  try {
+    await userDao.getSidebarData(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.get('/fetch-course-creator-data', async (req, res) => {
+  console.log('Received request to /api/fetch course creator data');
+  try {
+    await userDao.getCourseCreatorData(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.post('/add-semester', async (req, res) => {
+  console.log('Received request to /api/add-semester');
+  try {
+    await userDao.addSemester(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.post('/add-chapter', async (req, res) => {
+  console.log('Received request to /api/add-chapter');
+  try {
+    await userDao.addChapter(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.post('/add-section', async (req, res) => {
+  console.log('Received request to /api/add-section');
+  try {
+    await userDao.addSection(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.post('/add-chapter-test', async (req, res) => {
+  console.log('Received request to /api/add-chapter-test');
+  try {
+    await userDao.addChapterTest(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.post('/add-semester-test', async (req, res) => {
+  console.log('Received request to /api/add-semester-test');
+  try {
+    await userDao.addSemesterTest(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+router.get('/get-parent-data', async (req, res) => {
+  console.log('Received request to /api/fetch parent data');
+  try {
+    await userDao.getParentData(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 // Export the router
 module.exports = router;

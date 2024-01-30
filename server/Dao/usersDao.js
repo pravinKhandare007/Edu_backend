@@ -734,7 +734,7 @@ exports.fetchSubjects = function (request, response) {
   try {
     const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
     const selectQuery = 'SELECT subject_id, subject_name FROM subjects_info';
-    
+
     connection.query(selectQuery, (err, rows, fields) => {
       connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
 
@@ -756,7 +756,7 @@ exports.fetchClasses = function (request, response) {
   try {
     const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
     const selectQuery = 'SELECT class_id, class_name FROM classes_info';
-    
+
     connection.query(selectQuery, (err, rows, fields) => {
       connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
 
@@ -1038,73 +1038,73 @@ GROUP BY
 //   });
 // };
 
-  exports.addTeacher = function (request, response) {
-    const connection =
-      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+exports.addTeacher = function (request, response) {
+  const connection =
+    connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
 
-    connection.beginTransaction(function (err) {
-      if (err) {
-        console.error("Error starting transaction:", err);
-        return response.status(500).json({ error: "Internal Server Error" });
-      }
+  connection.beginTransaction(function (err) {
+    if (err) {
+      console.error("Error starting transaction:", err);
+      return response.status(500).json({ error: "Internal Server Error" });
+    }
 
-      try {
-        // ... (unchanged code)
-        const {
-          // teacher details from the form
-          firstName,
-          middleName,
-          lastName,
-          gender,
-          birthday,
-          email,
-          contactNumber,
-          alternativeNumber,
-          aadharCardNumber,
-          panCard,
-          // address details
-          permanentAddress,
-          city,
-          state,
-          // family details
-          fatherName,
-          motherName,
-          emergencyContactName,
-          emergencyContactNumber,
-        } = request.body;
+    try {
+      // ... (unchanged code)
+      const {
+        // teacher details from the form
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        birthday,
+        email,
+        contactNumber,
+        alternativeNumber,
+        aadharCardNumber,
+        panCard,
+        // address details
+        permanentAddress,
+        city,
+        state,
+        // family details
+        fatherName,
+        motherName,
+        emergencyContactName,
+        emergencyContactNumber,
+      } = request.body;
 
-        const schoolId = request.params.schoolId;
+      const schoolId = request.params.schoolId;
 
-        const connection =
-          connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+      const connection =
+        connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
 
-        // Generate sap_id and password
-        const sapId = generateRandomSapId();
-        const password = sapId; // Assuming password should be the same as sap_id
-        console.log("Generated SAP ID:", sapId);
-        console.log("Generated Password:", password);
+      // Generate sap_id and password
+      const sapId = generateRandomSapId();
+      const password = sapId; // Assuming password should be the same as sap_id
+      console.log("Generated SAP ID:", sapId);
+      console.log("Generated Password:", password);
 
-        const role = "teacher";
+      const role = "teacher";
 
-        const insertLoginQuery = `
+      const insertLoginQuery = `
           INSERT INTO login (school_id, sap_id, password, school_name, role)
           VALUES (?, ?, ?, (SELECT school_name FROM schools_info WHERE school_id = ?), ?);
         `;
 
-        const insertLoginPayload = [schoolId, sapId, password, schoolId, role];
+      const insertLoginPayload = [schoolId, sapId, password, schoolId, role];
 
-        connection.query(insertLoginQuery, insertLoginPayload, (err, result) => {
-          if (err) {
-            console.error("Error executing login query:", err);
-            return connection.rollback(function () {
-              connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
-                connection
-              );
-              response.status(500).json({ error: err.message });
-            });
-          }
+      connection.query(insertLoginQuery, insertLoginPayload, (err, result) => {
+        if (err) {
+          console.error("Error executing login query:", err);
+          return connection.rollback(function () {
+            connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+              connection
+            );
+            response.status(500).json({ error: err.message });
+          });
+        }
 
-          const insertTeacherQuery = `
+        const insertTeacherQuery = `
             INSERT INTO teachers_info (
               user_id,
               first_name,
@@ -1128,33 +1128,44 @@ GROUP BY
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
           `;
 
-          const insertTeacherPayload = [
-            result.insertId, // Use the ID generated in the login query
-            firstName,
-            middleName,
-            lastName,
-            gender,
-            birthday,
-            email,
-            contactNumber,
-            alternativeNumber,
-            aadharCardNumber,
-            panCard,
-            permanentAddress,
-            city,
-            state,
-            fatherName,
-            motherName,
-            emergencyContactName,
-            emergencyContactNumber,
-          ];
+        const insertTeacherPayload = [
+          result.insertId, // Use the ID generated in the login query
+          firstName,
+          middleName,
+          lastName,
+          gender,
+          birthday,
+          email,
+          contactNumber,
+          alternativeNumber,
+          aadharCardNumber,
+          panCard,
+          permanentAddress,
+          city,
+          state,
+          fatherName,
+          motherName,
+          emergencyContactName,
+          emergencyContactNumber,
+        ];
 
-          connection.query(
-            insertTeacherQuery,
-            insertTeacherPayload,
-            (err, result) => {
+        connection.query(
+          insertTeacherQuery,
+          insertTeacherPayload,
+          (err, result) => {
+            if (err) {
+              console.error("Error executing teacher query:", err);
+              return connection.rollback(function () {
+                connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+                  connection
+                );
+                response.status(500).json({ error: err.message });
+              });
+            }
+
+            connection.commit(function (err) {
               if (err) {
-                console.error("Error executing teacher query:", err);
+                console.error("Error committing transaction:", err);
                 return connection.rollback(function () {
                   connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
                     connection
@@ -1163,37 +1174,26 @@ GROUP BY
                 });
               }
 
-              connection.commit(function (err) {
-                if (err) {
-                  console.error("Error committing transaction:", err);
-                  return connection.rollback(function () {
-                    connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
-                      connection
-                    );
-                    response.status(500).json({ error: err.message });
-                  });
-                }
-
-                console.log("Transaction completed successfully");
-                connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
-                  connection
-                );
-                response.json({ message: "Teacher added successfully" });
-              });
-            }
-          );
-        });
-      } catch (error) {
-        console.error("Error adding teacher:", error);
-        connection.rollback(function () {
-          connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
-            connection
-          );
-          response.status(500).json({ error: "Internal Server Error" });
-        });
-      }
-    });
-  };
+              console.log("Transaction completed successfully");
+              connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+                connection
+              );
+              response.json({ message: "Teacher added successfully" });
+            });
+          }
+        );
+      });
+    } catch (error) {
+      console.error("Error adding teacher:", error);
+      connection.rollback(function () {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+          connection
+        );
+        response.status(500).json({ error: "Internal Server Error" });
+      });
+    }
+  });
+};
 
 exports.fetchStudentsForSchool = function (request, response) {
   const schoolId = request.params.schoolId;
@@ -1376,7 +1376,7 @@ exports.addStudent = function (request, response) {
           accountNumber,
           ifscCode,
           accountType
-            
+
         ];
 
         connection.query(
@@ -1536,6 +1536,7 @@ exports.createCourse = async function (request, response) {
       const insertQueryPayload = [userId, courseName, courseDescription, subjectId, classId];
 
       connection.query(insertQuery, insertQueryPayload, (err, result) => {
+        console.log('result: ', result.insertId);
         connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
 
         if (err) {
@@ -1544,8 +1545,8 @@ exports.createCourse = async function (request, response) {
         }
 
         // Send a success response
-        console.log('result: ', result);
-        response.json({ success: true, message: 'Course created successfully' });
+
+        response.json({ success: true, message: 'Course created successfully', courseId: result.insertId });
       });
     });
   } catch (error) {
@@ -1553,97 +1554,1098 @@ exports.createCourse = async function (request, response) {
     response.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-exports.saveCourse = function handleRequest(req, res){
+//chatgpt generated api.  
+exports.saveCoursegpt = function handleRequest(req, res) {
   const data = req.body;
   let connection;
 
   mysqlConnectionStringProvider.getMysqlConnection((err, conn) => {
+    if (err) {
+      return handleError(err);
+    }
+
+    connection = conn;
+
+    connection.beginTransaction((err) => {
       if (err) {
-          return handleError(err);
+        return handleError(err);
       }
 
-      connection = conn;
+      for (const semester of data.semesters) {
+        let contentString = JSON.stringify(semester.content);
+        let values = [semester.id, semester.name, contentString];
 
-      connection.beginTransaction((err) => {
+        connection.query('INSERT INTO semesters ( semester_id, name, content) VALUES (?,?,?)', values, (err, result) => {
           if (err) {
-              return handleError(err);
+            return handleError(err);
           }
 
-          for (const semester of data.semesters) {
-              let contentString = JSON.stringify(semester.content);
-              let values = [semester.id, semester.name, contentString];
+          console.log("response: ", result, "ResultSetHeader", result.insertId);
 
-              connection.query('INSERT INTO semesters ( semester_id, name, content) VALUES (?,?,?)', values, (err, result) => {
-                  if (err) {
-                      return handleError(err);
-                  }
+          for (const semesterTest of semester.semesterTest) {
+            contentString = JSON.stringify(semesterTest.content);
+            values = [semesterTest.id, result.insertId, semesterTest.name, semesterTest.timeLimit.hours, semesterTest.timeLimit.minutes, semesterTest.numberOfQuestions, contentString];
 
-                  console.log("response: ", result, "ResultSetHeader", result.insertId);
-
-                  for (const semesterTest of semester.semesterTest) {
-                      contentString = JSON.stringify(semesterTest.content);
-                      values = [semesterTest.id, result.insertId, semesterTest.name, semesterTest.timeLimit.hours, semesterTest.timeLimit.minutes, semesterTest.numberOfQuestions, contentString];
-
-                      connection.query('INSERT INTO semester_tests ( test_id, semester_id , name , time_limit_hours , time_limit_minutes , number_of_questions , content) VALUES (?,?,?,?,?,?,?)', values, handleQueryCallback);
-                  }
-
-                  for (const chapter of semester.chapters) {
-                      contentString = JSON.stringify(chapter.content);
-                      values = [chapter.id, result.insertId, chapter.name, contentString];
-
-                      connection.query('INSERT INTO chapters ( chapter_id, semester_id ,name, content) VALUES (?,?,?,?)', values, (err, chapterRes) => {
-                          if (err) {
-                              return handleError(err);
-                          }
-
-                          for (const chapterTest of chapter.chapterTest) {
-                              contentString = JSON.stringify(chapterTest.content);
-                              values = [chapterTest.id, chapterRes.insertId, chapterTest.name, chapterTest.timeLimit.hours, chapterTest.timeLimit.minutes, chapterTest.numberOfQuestions, contentString];
-
-                              connection.query('INSERT INTO chapter_tests ( chapter_test_id, chapter_id , name , time_limit_hours , time_limit_minutes , number_of_questions , content) VALUES (?,?,?,?,?,?,?)', values, handleQueryCallback);
-                          }
-
-                          for (const section of chapter.sections) {
-                              contentString = JSON.stringify(section.content);
-                              values = [section.id, chapterRes.insertId, section.name, contentString];
-
-                              connection.query('INSERT INTO sections (section_id, chapter_id ,name, content) VALUES (?,?,?,?)', values, handleQueryCallback);
-                          }
-                      });
-                  }
-              });
+            connection.query('INSERT INTO semester_tests ( test_id, semester_id , name , time_limit_hours , time_limit_minutes , number_of_questions , content) VALUES (?,?,?,?,?,?,?)', values, handleQueryCallback);
           }
 
-          connection.commit((err) => {
+          for (const chapter of semester.chapters) {
+            contentString = JSON.stringify(chapter.content);
+            values = [chapter.id, result.insertId, chapter.name, contentString];
+
+            connection.query('INSERT INTO chapters ( chapter_id, semester_id ,name, content) VALUES (?,?,?,?)', values, (err, chapterRes) => {
               if (err) {
-                  return handleError(err);
+                return handleError(err);
               }
 
-              mysqlConnectionStringProvider.closeMysqlConnection(connection, () => {
-                  res.status(200).json({ message: 'data added successfully' });
-              });
+              for (const chapterTest of chapter.chapterTest) {
+                contentString = JSON.stringify(chapterTest.content);
+                values = [chapterTest.id, chapterRes.insertId, chapterTest.name, chapterTest.timeLimit.hours, chapterTest.timeLimit.minutes, chapterTest.numberOfQuestions, contentString];
+
+                connection.query('INSERT INTO chapter_tests ( chapter_test_id, chapter_id , name , time_limit_hours , time_limit_minutes , number_of_questions , content) VALUES (?,?,?,?,?,?,?)', values, handleQueryCallback);
+              }
+
+              for (const section of chapter.sections) {
+                contentString = JSON.stringify(section.content);
+                values = [section.id, chapterRes.insertId, section.name, contentString];
+
+                connection.query('INSERT INTO sections (section_id, chapter_id ,name, content) VALUES (?,?,?,?)', values, handleQueryCallback);
+              }
+            });
+          }
+        });
+      }
+
+      connection.commit((err) => {
+        if (err) {
+          return handleError(err);
+        }
+
+        mysqlConnectionStringProvider.closeMysqlConnection(connection, () => {
+          res.status(200).json({ message: 'data added successfully' });
+        });
+      });
+    });
+
+    const handleQueryCallback = (err) => {
+      if (err) {
+        return handleError(err);
+      }
+    };
+
+    const handleError = (err) => {
+      if (connection) {
+        connection.rollback(() => {
+          mysqlConnectionStringProvider.closeMysqlConnection(connection, () => {
+            console.error("Rollback error:", err);
+            res.status(500).json({ error: 'An error occurred while processing the request' });
           });
+        });
+      } else {
+        console.error("Error:", err);
+        res.status(500).json({ error: 'An error occurred while processing the request' });
+      }
+    };
+  });
+};
+
+// save course api 
+
+// exports.saveCourse = async function (request, response) {
+//   try {
+//     const { courseId, semesterId, chapterId, semesterTestId, sectionId, chapterTestId, content, timeLimitHours, timeLimitMinutes, numberOfQuestions } = request.body;
+//     // Get the token from the request headers
+//     const contentString = JSON.stringify(content);
+//     // const token = request.headers.authorization.split(' ')[1]; // Assuming the token is sent in the Authorization header
+
+//     // Verify the token
+    
+
+//       // Token verified successfully, extract user_id
+//       //we have the course id we need to check if data exists for this course id if it does we update if not we insert
+
+//       // Insert into the database
+//       const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+//       // ------------------------------------------------------------------------------
+//       // if (!semesterId && !chapterId && !semesterTestId && !sectionId && !chapterTestId) {
+//       //   //initial mount
+        
+//       //   return response.json({ status: 'select content to save' });
+//       // }
+//       //if section is selected.
+//       if (semesterId && chapterId && sectionId) {
+//         //stringfy content.
+//         const updateQuery = `
+//         UPDATE sections
+//         SET content = ?
+//         WHERE section_id = ? AND chapter_id = ?;
+//         `
+//         connection.query(updateQuery, [contentString, sectionId, chapterId], (err, result, fields) => {
+//           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+//             connection
+//           );
+
+//           // if (err) {
+//           //   console.error("Error executing database query:", err);
+//           //   return response.status(500).json({ error: err.message });
+//           // }
+
+//           // // Check if any rows were affected
+//           // if (result.affectedRows === 0) {
+//           //   return response.status(404).json({ message: 'No section found or no data updated' });
+//           // }
+
+//           response.json({ status:'success' })
+
+//         })
+//       } else if (semesterId && chapterId && chapterTestId) {
+//         const selectQuery = `SELECT 
+//           chapter_tests.chapter_tests_content 
+//           FROM
+//           chapter_tests
+//           WHERE 
+//           chapter_tests.chapter_tests_id = ? AND chapter_tests.chapter_id = ?
+//           `
+//         connection.query(selectQuery, [chapterTestId, chapterId], (err, rows, fields) => {
+//           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+//             connection
+//           );
+
+//           if (err) {
+//             console.error("Error executing database query:", err);
+//             return response.status(500).json({ error: err.message });
+//           }
+
+
+//           if (rows.length === 0) {
+//             return response.json({ status: 'no data' });
+//           }
+
+//           if (rows.length === 1) {
+//             console.log("rows : ", rows, "and ", rows[0]);
+//             const content = rows[0].chapter_tests_content;
+//             response.json({ content: content });
+//           }
+
+//         })
+//       } else if (semesterId && chapterId) {
+//         const selectQuery = `SELECT 
+//           chapters.chapter_content 
+//           FROM
+//           chapters
+//           WHERE 
+//           chapters.chapter_id = ? AND chapters.semester_id = ?
+//           `
+//         connection.query(selectQuery, [chapterId, semesterId], (err, rows, fields) => {
+//           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+//             connection
+//           );
+
+//           if (err) {
+//             console.error("Error executing database query:", err);
+//             return response.status(500).json({ error: err.message });
+//           }
+
+//           if (rows.length === 0) {
+//             return response.json({ status: 'no data' });
+//           }
+
+//           if (rows.length === 1) {
+//             console.log("rows : ", rows, "and ", rows[0]);
+//             const content = rows[0].chapter_content;
+//             response.json({ content: content });
+//           }
+
+//         })
+//       } else if (semesterId && semesterTestId) {
+//         const selectQuery = `SELECT 
+//           semester_tests.semester_tests_content
+//           FROM
+//           semester_tests
+//           WHERE 
+//           semester_tests.semester_tests_id = ? AND semester_tests.semester_id = ?
+//           `
+//         connection.query(selectQuery, [semesterTestId, semesterId], (err, rows, fields) => {
+//           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+//             connection
+//           );
+
+//           if (err) {
+//             console.error("Error executing database query:", err);
+//             return response.status(500).json({ error: err.message });
+//           }
+
+//           if (rows.length === 0) {
+//             return response.json({ status: 'no data' });
+//           }
+
+//           if (rows.length === 1) {
+//             console.log("rows : ", rows, "and ", rows[0]);
+//             const content = rows[0].semester_tests_content;
+//             response.json({ content: content });
+//           }
+
+//         })
+//       } else {
+//         const selectQuery = `SELECT 
+//           semesters.semester_content
+//           FROM
+//           semesters
+//           WHERE 
+//           semesters.semester_id = ? AND semesters.course_id = ?
+//           `
+//         connection.query(selectQuery, [semesterId, courseId], (err, rows, fields) => {
+//           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+//             connection
+//           );
+
+//           if (err) {
+//             console.error("Error executing database query:", err);
+//             return response.status(500).json({ error: err.message });
+//           }
+
+
+//           if (rows.length === 0) {
+//             return response.json({ status: 'no data' });
+//           }
+
+//           if (rows.length === 1) {
+//             console.log("rows : ", rows, "and ", rows[0]);
+//             const content = rows[0].semester_content;
+//             if (!content) {
+//               return response.json({ status: 'no data' });
+//             } else {
+//               response.json({ content: content });
+//             }
+//           }
+//         })
+//       }
+//       // ------------------------------------------------------------------------------
+//       const insertQuery = `
+//         INSERT INTO courses_info (user_id, course_name, course_description, subject_id, class_id)
+//         VALUES (?, ?, ?, ?, ?)
+//       `;
+//       const insertQueryPayload = [userId, courseName, courseDescription, subjectId, classId];
+
+//       connection.query(insertQuery, insertQueryPayload, (err, result) => {
+//         console.log('result: ', result.insertId);
+//         connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+
+//         if (err) {
+//           console.error('Error executing database query:', err);
+//           return response.status(500).json({ error: err.message });
+//         }
+
+//         // Send a success response
+
+//         response.json({ success: true, message: 'Course created successfully', courseId: result.insertId });
+//       });
+    
+//   } catch (error) {
+//     console.error('Error creating course:', error);
+//     response.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
+exports.saveCourse = async function (request, response) {
+  try {
+    const { courseId, semesterId, chapterId, semesterTestId, sectionId, chapterTestId, content, timeLimitHours, timeLimitMinutes, numberOfQuestions } = request.body;
+    const contentString = JSON.stringify(content);
+    const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    if (semesterId && chapterId && sectionId) {
+      const updateQuery = `
+        UPDATE sections
+        SET content = ?
+        WHERE section_id = ? AND chapter_id = ?;
+      `;
+      connection.query(updateQuery, [contentString, sectionId, chapterId], (err, result, fields) => {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        if (err) {
+          console.error("Error executing database query:", err);
+          return response.status(500).json({ error: err.message });
+        }
+        response.json({ status: 'success' });
+      });
+    } else if (semesterId && chapterId && chapterTestId) {
+      const updateQuery = `
+        UPDATE chapter_tests
+        SET chapter_tests_content = ?,
+            time_limit_hours = ?,
+            time_limit_minutes = ?,
+            number_of_questions = ?
+        WHERE chapter_tests_id = ? AND chapter_id = ?;
+      `;
+      connection.query(updateQuery, [contentString,timeLimitHours,timeLimitMinutes,numberOfQuestions,chapterTestId, chapterId], (err, result, fields) => {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        if (err) {
+          console.error("Error executing database query:", err);
+          return response.status(500).json({ error: err.message });
+        }
+        response.json({ status: 'success' });
+      });
+    } else if (semesterId && chapterId){
+      const updateQuery = `
+      UPDATE chapters
+      SET chapter_content = ?
+      WHERE chapter_id = ? AND semester_id = ?;
+      `;
+      connection.query(updateQuery, [contentString, chapterId, semesterId], (err, result, fields) => {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        if (err) {
+          console.error("Error executing database query:", err);
+          return response.status(500).json({ error: err.message });
+        }
+        response.json({ status: 'success' });
+      });
+    } else if (semesterId && semesterTestId){
+      const updateQuery = `
+        UPDATE semester_tests
+        SET semester_tests_content = ?,
+            time_limit_hours = ?,
+            time_limit_minutes = ?,
+            number_of_questions = ?
+        WHERE semester_tests_id = ? AND semester_id = ?;
+      `;
+      connection.query(updateQuery, [contentString,timeLimitHours,timeLimitMinutes,numberOfQuestions,semesterTestId, semesterId], (err, result, fields) => {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        if (err) {
+          console.error("Error executing database query:", err);
+          return response.status(500).json({ error: err.message });
+        }
+        response.json({ status: 'success' });
+      });
+    } else if (semesterId){
+      const updateQuery = `
+      UPDATE semesters
+      SET semester_content = ?
+      WHERE course_id = ? AND semester_id = ?;
+      `;
+      connection.query(updateQuery, [contentString, courseId, semesterId], (err, result, fields) => {
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        if (err) {
+          console.error("Error executing database query:", err);
+          return response.status(500).json({ error: err.message });
+        }
+        response.json({ status: 'success' });
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    response.status(500).json({ error: error.message });
+  }
+};
+
+exports.getSidebarData = function (request, response) {
+
+  const courseId = request.query.courseId;
+
+  console.log("body ", courseId);
+
+  const connection =
+    connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+  const selectQuery = `
+  SELECT 
+  semesters.semester_id,
+  semesters.name AS semester_name,
+  chapters.chapter_id,
+  chapters.name AS chapter_name,
+  semester_tests.semester_tests_id,
+  semester_tests.name AS semester_test_name,
+  sections.section_id,
+  sections.name AS section_name,
+  chapter_tests.chapter_tests_id,
+  chapter_tests.name AS chapter_tests_name
+FROM 
+  courses_info
+LEFT JOIN 
+  semesters ON courses_info.course_id = semesters.course_id
+LEFT JOIN 
+  chapters ON semesters.semester_id = chapters.semester_id
+LEFT JOIN 
+  semester_tests ON semesters.semester_id = semester_tests.semester_id
+LEFT JOIN 
+  sections ON chapters.chapter_id = sections.chapter_id
+LEFT JOIN 
+  chapter_tests ON chapters.chapter_id = chapter_tests.chapter_id
+WHERE 
+  courses_info.course_id = ?
+ORDER BY
+  semesters.semester_id ASC,
+  chapters.chapter_id ASC,
+  semester_tests.semester_tests_id ASC,
+  sections.section_id ASC,
+  chapter_tests.chapter_tests_id ASC;
+  `;
+
+  connection.query(selectQuery, [courseId], (err, rows, fields) => {
+    connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+      connection
+    );
+
+    if (err) {
+      console.error("Error executing database query:", err);
+      return response.status(500).json({ error: err.message });
+    }
+    console.log("rows : " , rows);
+    if (rows.length === 1 && !rows[0].semester_id) {
+      return response.json({ status: 'no data' });
+    }
+    // ------------------------------------------------------------------------------
+    const semesters = {};
+    rows.forEach(row => {
+      const { semester_id, semester_name, chapter_id, chapter_name, semester_tests_id, semester_test_name, section_id, section_name, chapter_tests_id, chapter_tests_name } = row;
+
+      if (!semesters[semester_id] && semester_id) {
+        semesters[semester_id] = {
+          id: semester_id,
+          name: semester_name,
+          chapters: {},
+          semesterTest: {}
+        };
+      }
+
+      if (!semesters[semester_id].chapters[chapter_id] && chapter_id) {
+        semesters[semester_id].chapters[chapter_id] = {
+          id: chapter_id,
+          name: chapter_name,
+          sections: [],
+          chapterTest: []
+        };
+      }
+
+      if (!semesters[semester_id].semesterTest[semester_tests_id] && semester_tests_id) {
+        semesters[semester_id].semesterTest[semester_tests_id] = {
+          id: semester_tests_id,
+          name: semester_test_name,
+        };
+      }
+
+      if (section_id && section_name) {
+        semesters[semester_id].chapters[chapter_id].sections.push({
+          id: section_id,
+          name: section_name
+        });
+      }
+
+      if (chapter_tests_id && chapter_tests_name) {
+        semesters[semester_id].chapters[chapter_id].chapterTest.push({
+          id: chapter_tests_id,
+          name: chapter_tests_name
+        });
+      }
+    });
+
+    // Convert semesters object into an array
+    const result = Object.values(semesters).map(semester => {
+      semester.chapters = Object.values(semester.chapters);
+      semester.semesterTest = Object.values(semester.semesterTest);
+      return semester;
+    });
+
+    // ------------------------------------------------------------------------------
+
+    console.log("Student Details:", rows);
+    response.json({ semesters: result });
+  });
+};
+
+exports.getParentData = function (request, response) {
+
+  const {courseId, semesterId} = request.query;
+
+  console.log("body ", courseId);
+
+  const connection =
+    connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+  const selectQuery = `
+  SELECT 
+  semesters.semester_id,
+  semesters.name AS semester_name,
+  semesters.semester_content AS semester_content,
+  chapters.chapter_id,
+  chapters.name AS chapter_name,
+  chapters.chapter_content AS chapter_content,
+  semester_tests.semester_tests_id,
+  semester_tests.name AS semester_test_name,
+  semester_tests.semester_tests_content AS semester_tests_content,
+  sections.section_id,
+  sections.name AS section_name,
+  sections.content AS section_content,
+  chapter_tests.chapter_tests_id,
+  chapter_tests.name AS chapter_tests_name,
+  chapter_tests.chapter_tests_content AS chapter_tests_content
+FROM 
+  semesters
+LEFT JOIN 
+  chapters ON semesters.semester_id = chapters.semester_id
+LEFT JOIN 
+  semester_tests ON semesters.semester_id = semester_tests.semester_id
+LEFT JOIN 
+  sections ON chapters.chapter_id = sections.chapter_id
+LEFT JOIN 
+  chapter_tests ON chapters.chapter_id = chapter_tests.chapter_id
+WHERE 
+semesters.semester_id = ?
+ORDER BY
+  chapters.chapter_id ASC,
+  semester_tests.semester_tests_id ASC,
+  sections.section_id ASC,
+  chapter_tests.chapter_tests_id ASC;
+  `;
+
+  connection.query(selectQuery, [semesterId], (err, rows, fields) => {
+    connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+      connection
+    );
+
+    if (err) {
+      console.error("Error executing database query:", err);
+      return response.status(500).json({ error: err.message });
+    }
+    console.log("rows : " , rows);
+    if (rows.length === 1 && !rows[0].semester_id) {
+      return response.json({ status: 'no data' });
+    }
+    // ------------------------------------------------------------------------------
+    const semesters = {};
+    rows.forEach(row => {
+      const { semester_id, semester_name, semester_content,chapter_id, chapter_name,chapter_content, semester_tests_id, semester_test_name,semester_tests_content, section_id, section_name,section_content, chapter_tests_id, chapter_tests_name ,chapter_tests_content} = row;
+
+      if (!semesters[semester_id] && semester_id) {
+        semesters[semester_id] = {
+          id: semester_id,
+          name: semester_name,
+          content:semester_content,
+          chapters: {},
+          semesterTest: {}
+        };
+      }
+
+      if (!semesters[semester_id].chapters[chapter_id] && chapter_id) {
+        semesters[semester_id].chapters[chapter_id] = {
+          id: chapter_id,
+          name: chapter_name,
+          content:chapter_content,
+          sections: [],
+          chapterTest: []
+        };
+      }
+
+      if (!semesters[semester_id].semesterTest[semester_tests_id] && semester_tests_id) {
+        semesters[semester_id].semesterTest[semester_tests_id] = {
+          id: semester_tests_id,
+          name: semester_test_name,
+          content:semester_tests_content
+        };
+      }
+
+      if (section_id && section_name) {
+        semesters[semester_id].chapters[chapter_id].sections.push({
+          id: section_id,
+          name: section_name,
+          content:section_content
+        });
+      }
+
+      if (chapter_tests_id && chapter_tests_name) {
+        semesters[semester_id].chapters[chapter_id].chapterTest.push({
+          id: chapter_tests_id,
+          name: chapter_tests_name,
+          content:chapter_tests_content
+        });
+      }
+    });
+
+    // Convert semesters object into an array
+    const result = Object.values(semesters).map(semester => {
+      semester.chapters = Object.values(semester.chapters);
+      semester.semesterTest = Object.values(semester.semesterTest);
+      return semester;
+    });
+
+    // ------------------------------------------------------------------------------
+    if(result.length === 0){
+      return response.json({ statues: "no data" });
+    }
+    console.log("Student Details:", rows);
+    response.json({ semesters: result });
+  });
+};
+
+exports.getCourseCreatorData = function (request, response) {
+
+  const { courseId, semesterId, chapterId, semesterTestId, sectionId, chapterTestId } = request.query;
+
+  console.log("body ", courseId);
+
+  const connection =
+    connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+  if (!semesterId && !chapterId && !semesterTestId && !sectionId && !chapterTestId) {
+    //initial mount
+    return response.json({ status: 'initial mount' });
+  }
+
+  if (semesterId && chapterId && sectionId) {
+    const selectQuery = `SELECT 
+      sections.content 
+      FROM
+      sections
+      WHERE 
+      sections.section_id = ? AND sections.chapter_id = ?
+      `
+    connection.query(selectQuery, [sectionId, chapterId], (err, rows, fields) => {
+      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+        connection
+      );
+
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      if (rows.length === 0) {
+        return response.json({ status: 'no data' });
+      }
+
+      if (rows.length === 1) {
+        console.log("rows : ", rows, "and ", rows[0]);
+        const content = rows[0].content;
+        response.json({ content: content });
+      }
+
+    })
+  } else if (semesterId && chapterId && chapterTestId) {
+    const selectQuery = `SELECT 
+      chapter_tests.chapter_tests_content 
+      FROM
+      chapter_tests
+      WHERE 
+      chapter_tests.chapter_tests_id = ? AND chapter_tests.chapter_id = ?
+      `
+    connection.query(selectQuery, [chapterTestId, chapterId], (err, rows, fields) => {
+      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+        connection
+      );
+
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+
+      if (rows.length === 0) {
+        return response.json({ status: 'no data' });
+      }
+
+      if (rows.length === 1) {
+        console.log("rows : ", rows, "and ", rows[0]);
+        const content = rows[0].chapter_tests_content;
+        response.json({ content: content });
+      }
+
+    })
+  } else if (semesterId && chapterId) {
+    const selectQuery = `SELECT 
+      chapters.chapter_content 
+      FROM
+      chapters
+      WHERE 
+      chapters.chapter_id = ? AND chapters.semester_id = ?
+      `
+    connection.query(selectQuery, [chapterId, semesterId], (err, rows, fields) => {
+      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+        connection
+      );
+
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      if (rows.length === 0) {
+        return response.json({ status: 'no data' });
+      }
+
+      if (rows.length === 1) {
+        console.log("rows : ", rows, "and ", rows[0]);
+        const content = rows[0].chapter_content;
+        response.json({ content: content });
+      }
+
+    })
+  } else if (semesterId && semesterTestId) {
+    const selectQuery = `SELECT 
+      semester_tests.semester_tests_content
+      FROM
+      semester_tests
+      WHERE 
+      semester_tests.semester_tests_id = ? AND semester_tests.semester_id = ?
+      `
+    connection.query(selectQuery, [semesterTestId, semesterId], (err, rows, fields) => {
+      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+        connection
+      );
+
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      if (rows.length === 0) {
+        return response.json({ status: 'no data' });
+      }
+
+      if (rows.length === 1) {
+        console.log("rows : ", rows, "and ", rows[0]);
+        const content = rows[0].semester_tests_content;
+        response.json({ content: content });
+      }
+
+    })
+  } else {
+    const selectQuery = `SELECT 
+      semesters.semester_content
+      FROM
+      semesters
+      WHERE 
+      semesters.semester_id = ? AND semesters.course_id = ?
+      `
+    connection.query(selectQuery, [semesterId, courseId], (err, rows, fields) => {
+      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+        connection
+      );
+
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+
+      if (rows.length === 0) {
+        return response.json({ status: 'no data' });
+      }
+
+      if (rows.length === 1) {
+        console.log("rows : ", rows, "and ", rows[0]);
+        const content = rows[0].semester_content;
+        if (!content) {
+          return response.json({ status: 'no data' });
+        } else {
+          response.json({ content: content });
+        }
+      }
+    })
+  }
+};
+
+exports.addSemester = function (request, response) {
+  try {
+    const { name, courseId } = request.body;
+    const connection =
+      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    const insertQuery = `
+    INSERT INTO semesters (course_id, name)
+    VALUES (?, ?);
+    `
+    connection.query(insertQuery, [courseId, name], (err, result) => {
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      console.log("result : ", result);
+      response.json({ status: 'success', insertId: result.insertId });
+    })
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+exports.addChapter = function (request, response) {
+  try {
+    const { name, courseId, semesterId } = request.body;
+    const connection =
+      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    const insertQuery = `
+    INSERT INTO chapters (semester_id, name)
+    VALUES (?, ?);
+    `
+    connection.query(insertQuery, [semesterId, name], (err, result) => {
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      console.log("result : ", result);
+      response.json({ status: 'success', insertId: result.insertId });
+    })
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+exports.addSection = function (request, response) {
+  try {
+    const { name, chapterId } = request.body;
+    const connection =
+      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    const insertQuery = `
+    INSERT INTO sections (chapter_id, name)
+    VALUES (?, ?);
+    `
+    connection.query(insertQuery, [chapterId, name], (err, result) => {
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      console.log("result : ", result);
+      response.json({ status: 'success', insertId: result.insertId });
+    })
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+exports.addChapterTest = function (request, response) {
+  try {
+    const { name, chapterId } = request.body;
+
+    const connection =
+      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    const insertQuery = `
+    INSERT INTO chapter_tests (chapter_id, name , time_limit_hours , time_limit_minutes , number_of_questions)
+    VALUES (?, ? , ?,?,?);
+    `
+    //by default we will populate the time limit columns and the no. of questions to display.
+    const time_limit_hours = 1;
+    const time_limit_minutes = 30;
+    const number_of_questions = 5;
+
+    connection.query(insertQuery, [chapterId, name, time_limit_hours, time_limit_minutes, number_of_questions], (err, result) => {
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      console.log("result : ", result);
+      response.json({ status: 'success', insertId: result.insertId });
+    })
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+exports.addSemesterTest = function (request, response) {
+  try {
+    const { name, semesterId } = request.body;
+
+    const connection =
+      connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    const insertQuery = `
+    INSERT INTO semester_tests (semester_id, name , time_limit_hours , time_limit_minutes , number_of_questions)
+    VALUES (?, ? , ?,?,?);
+    `
+    //by default we will populate the time limit columns and the no. of questions to display.
+    const time_limit_hours = 1;
+    const time_limit_minutes = 30;
+    const number_of_questions = 5;
+
+    connection.query(insertQuery, [semesterId, name, time_limit_hours, time_limit_minutes, number_of_questions], (err, result) => {
+      if (err) {
+        console.error("Error executing database query:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      console.log("result : ", result);
+      response.json({ status: 'success', insertId: result.insertId });
+    })
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// exports.newSaveCourse = async function (request, response) {
+//   try {
+//     const data = request.body;
+//     const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+//     let contentString;
+//     for(semester of data.semesters){
+//       contentString = json.stringfy(semester.content);
+//       const updateQuery = `
+//         UPDATE semesters
+//         SET semester_content = ?
+//         WHERE semester_id = ?;
+//       `;
+//       connection.query(updateQuery, [contentString, semester.id], (err, result, fields) => {
+//         connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+//         if (err) {
+//           console.error("Error executing database query:", err);
+//           return response.status(500).json({ error: err.message });
+//         }
+//         response.json({ status: 'success' });
+//       });
+//     }
+    
+//   } catch (error) {
+//     console.error("Error:", error);
+//     response.status(500).json({ error: error.message });
+//   }
+// };
+
+exports.newSaveCourse = function (request, response) {
+  try {
+    const data = request.body.data;
+    const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+    // Start transaction
+    connection.beginTransaction(function (err) {
+      if (err) {
+        console.error("Error starting transaction:", err);
+        return response.status(500).json({ error: err.message });
+      }
+
+      // //semester save 
+      // connection.query(updateSemesterQuery, [contentString, semester.id], function (err, result) {
+      //   console.log("semester query called");
+      //   if (err) {
+      //     console.error("Error updating semester content:", err);
+      //     connection.rollback(function () {
+      //       connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+      //       response.status(500).json({ error: err.message });
+      //     });
+      //     return;
+      //   }else{
+      //     //bulk update 
+      //     //loop semester.chapters get all chapter content in array [content , content]; [[id ,content ]; [id ,content]];
+      //     data.semesters
+      //     connection.query(updateSemesterQuery, [contentString, semester.id], function (err, result) {
+      //       console.log("semester query called");
+      //       if (err) {
+      //         console.error("Error updating semester content:", err);
+      //         connection.rollback(function () {
+      //           connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+      //           response.status(500).json({ error: err.message });
+      //         });
+      //         return;
+      //       }else{
+              
+      //       }
+      //     })
+      //   }
+      // })
+
+ 
+      // Iterate through semesters
+      data.semesters.forEach(function (semester) {
+        const contentString = JSON.stringify(semester.content);
+
+        // Update semester content
+        const updateSemesterQuery = `
+          UPDATE semesters
+          SET semester_content = ?
+          WHERE semester_id = ?;
+        `;
+
+        // Execute update query for semester
+        connection.query(updateSemesterQuery, [contentString, semester.id], function (err, result) {
+          console.log("semester query called");
+          if (err) {
+            console.error("Error updating semester content:", err);
+            connection.rollback(function () {
+              connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+              response.status(500).json({ error: err.message });
+            });
+            return;
+          }
+
+          // Iterate through chapters within the semester
+          semester.chapters.forEach(function (chapter) {
+            console.log("chapter query called");
+            const chapterContentString = JSON.stringify(chapter.content);
+
+            // Update chapter content
+            const updateChapterQuery = `
+              UPDATE chapters
+              SET chapter_content = ?
+              WHERE chapter_id = ?;
+            `;
+
+            // Execute update query for chapter
+            connection.query(updateChapterQuery, [chapterContentString, chapter.id], function (err, result) {
+              if (err) {
+                console.error("Error updating chapter content:", err);
+                connection.rollback(function () {
+                  connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+                  response.status(500).json({ error: err.message });
+                });
+                return;
+              }
+
+              // Iterate through sections within the chapter
+              
+              chapter.sections.forEach(function (section) {
+                console.log("semester query called");
+                console.log("section" , section);
+                const sectionContentString = JSON.stringify(section.content);
+
+                // Update section content
+                const updateSectionQuery = `
+                  UPDATE sections
+                  SET content = ?
+                  WHERE section_id = ?;
+                `;
+
+                // Execute update query for section
+                connection.query(updateSectionQuery, [sectionContentString, section.id], function (err, result) {
+                  if (err) {
+                    console.error("Error updating section content:", err);
+                    connection.rollback(function () {
+                      console.log("inside rollback section")
+                      connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+                      response.status(500).json({ error: err.message });
+                    });
+                    return;
+                  }
+                });
+              });
+            });
+          });
+        });
+        console.log("loop finished");
       });
 
-      const handleQueryCallback = (err) => {
-          if (err) {
-              return handleError(err);
-          }
-      };
-
-      const handleError = (err) => {
-          if (connection) {
-              connection.rollback(() => {
-                  mysqlConnectionStringProvider.closeMysqlConnection(connection, () => {
-                      console.error("Rollback error:", err);
-                      res.status(500).json({ error: 'An error occurred while processing the request' });
-                  });
-              });
-          } else {
-              console.error("Error:", err);
-              res.status(500).json({ error: 'An error occurred while processing the request' });
-          }
-      };
-  });
+      // Commit transaction
+      connection.commit(function (err) {
+        console.log("commit called")
+        if (err) {
+          console.error("Error committing transaction:", err);
+          connection.rollback(function () {
+            connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+            response.status(500).json({ error: err.message });
+          });
+          return;
+        }
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        response.json({ status: 'success' });
+      });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    response.status(500).json({ error: error.message });
+  }
 };
