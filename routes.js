@@ -264,7 +264,7 @@ router.post('/create-course', async (req, res) => {
 router.post('/save-course', async (req, res) => {
   console.log('Received request to /api/save-course');
   try {
-    await userDao.newSaveCourse(req, res);
+    await userDao.finalSaveCourse(req, res);
   } catch (error) {
     console.error('Error saving course:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -347,6 +347,16 @@ router.get('/get-parent-data', async (req, res) => {
   console.log('Received request to /api/fetch parent data');
   try {
     await userDao.getParentData(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.get('/fetch-course-info', async (req, res) => {
+  console.log('Received request to /api/fetch course info');
+  try {
+    await userDao.getCourseInfo(req, res);
   } catch (error) {
     console.error('Error saving course:', error);
     res.status(500).json({ error: 'Internal Server Error' });

@@ -695,6 +695,7 @@ exports.fetchUserData = function (request, response) {
       const selectQuery = `
       SELECT
       login.user_id,
+      courses_info.course_id,
       courses_info.course_name,
       courses_info.status,
       subjects_info.subject_name,
@@ -705,7 +706,6 @@ exports.fetchUserData = function (request, response) {
       LEFT JOIN subjects_info ON courses_info.subject_id = subjects_info.subject_id
       WHERE login.user_id = ?
       GROUP BY courses_info.course_id;
-
       `;
       const selectQueryPayload = [userId];
 
@@ -1659,7 +1659,7 @@ exports.saveCoursegpt = function handleRequest(req, res) {
 //     // const token = request.headers.authorization.split(' ')[1]; // Assuming the token is sent in the Authorization header
 
 //     // Verify the token
-    
+
 
 //       // Token verified successfully, extract user_id
 //       //we have the course id we need to check if data exists for this course id if it does we update if not we insert
@@ -1669,7 +1669,7 @@ exports.saveCoursegpt = function handleRequest(req, res) {
 //       // ------------------------------------------------------------------------------
 //       // if (!semesterId && !chapterId && !semesterTestId && !sectionId && !chapterTestId) {
 //       //   //initial mount
-        
+
 //       //   return response.json({ status: 'select content to save' });
 //       // }
 //       //if section is selected.
@@ -1840,7 +1840,7 @@ exports.saveCoursegpt = function handleRequest(req, res) {
 
 //         response.json({ success: true, message: 'Course created successfully', courseId: result.insertId });
 //       });
-    
+
 //   } catch (error) {
 //     console.error('Error creating course:', error);
 //     response.status(500).json({ error: 'Internal Server Error' });
@@ -1876,7 +1876,7 @@ exports.saveCourse = async function (request, response) {
             number_of_questions = ?
         WHERE chapter_tests_id = ? AND chapter_id = ?;
       `;
-      connection.query(updateQuery, [contentString,timeLimitHours,timeLimitMinutes,numberOfQuestions,chapterTestId, chapterId], (err, result, fields) => {
+      connection.query(updateQuery, [contentString, timeLimitHours, timeLimitMinutes, numberOfQuestions, chapterTestId, chapterId], (err, result, fields) => {
         connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
         if (err) {
           console.error("Error executing database query:", err);
@@ -1884,7 +1884,7 @@ exports.saveCourse = async function (request, response) {
         }
         response.json({ status: 'success' });
       });
-    } else if (semesterId && chapterId){
+    } else if (semesterId && chapterId) {
       const updateQuery = `
       UPDATE chapters
       SET chapter_content = ?
@@ -1898,7 +1898,7 @@ exports.saveCourse = async function (request, response) {
         }
         response.json({ status: 'success' });
       });
-    } else if (semesterId && semesterTestId){
+    } else if (semesterId && semesterTestId) {
       const updateQuery = `
         UPDATE semester_tests
         SET semester_tests_content = ?,
@@ -1907,7 +1907,7 @@ exports.saveCourse = async function (request, response) {
             number_of_questions = ?
         WHERE semester_tests_id = ? AND semester_id = ?;
       `;
-      connection.query(updateQuery, [contentString,timeLimitHours,timeLimitMinutes,numberOfQuestions,semesterTestId, semesterId], (err, result, fields) => {
+      connection.query(updateQuery, [contentString, timeLimitHours, timeLimitMinutes, numberOfQuestions, semesterTestId, semesterId], (err, result, fields) => {
         connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
         if (err) {
           console.error("Error executing database query:", err);
@@ -1915,7 +1915,7 @@ exports.saveCourse = async function (request, response) {
         }
         response.json({ status: 'success' });
       });
-    } else if (semesterId){
+    } else if (semesterId) {
       const updateQuery = `
       UPDATE semesters
       SET semester_content = ?
@@ -1988,7 +1988,7 @@ ORDER BY
       console.error("Error executing database query:", err);
       return response.status(500).json({ error: err.message });
     }
-    console.log("rows : " , rows);
+    console.log("rows : ", rows);
     if (rows.length === 1 && !rows[0].semester_id) {
       return response.json({ status: 'no data' });
     }
@@ -2007,11 +2007,12 @@ ORDER BY
       }
 
       if (!semesters[semester_id].chapters[chapter_id] && chapter_id) {
+        console.log("chapter condition:")
         semesters[semester_id].chapters[chapter_id] = {
           id: chapter_id,
           name: chapter_name,
-          sections: [],
-          chapterTest: []
+          sections: {},
+          chapterTest: {}
         };
       }
 
@@ -2022,38 +2023,46 @@ ORDER BY
         };
       }
 
-      if (section_id && section_name) {
-        semesters[semester_id].chapters[chapter_id].sections.push({
-          id: section_id,
-          name: section_name
-        });
+      if (semesters[semester_id].chapters[chapter_id] && chapter_id) {
+        if (!semesters[semester_id].chapters[chapter_id].sections[section_id] && section_id) {
+          semesters[semester_id].chapters[chapter_id].sections[section_id] = {
+            id: section_id,
+            name: section_name
+          }
+          console.log("section added", semesters[semester_id].chapters[chapter_id].sections[section_id]);
+        }
       }
 
-      if (chapter_tests_id && chapter_tests_name) {
-        semesters[semester_id].chapters[chapter_id].chapterTest.push({
-          id: chapter_tests_id,
-          name: chapter_tests_name
-        });
+      if (semesters[semester_id].chapters[chapter_id] && chapter_id) { //if chapter is not present dont check to add tests
+        if (!semesters[semester_id].chapters[chapter_id].chapterTest[chapter_tests_id] && chapter_tests_id) {
+          semesters[semester_id].chapters[chapter_id].chapterTest[chapter_tests_id] = {
+            id: chapter_tests_id,
+            name: chapter_tests_name
+          }
+        }
       }
     });
-
+    console.log("final semesters", semesters);
     // Convert semesters object into an array
     const result = Object.values(semesters).map(semester => {
-      semester.chapters = Object.values(semester.chapters);
+      semester.chapters = Object.values(semester.chapters).map(chapter => {
+        console.log("sections:", chapter.sections);
+        chapter.sections = Object.values(chapter.sections);
+        chapter.chapterTest = Object.values(chapter.chapterTest);
+        return chapter
+      })
       semester.semesterTest = Object.values(semester.semesterTest);
       return semester;
     });
 
     // ------------------------------------------------------------------------------
-
-    console.log("Student Details:", rows);
     response.json({ semesters: result });
   });
 };
 
 exports.getParentData = function (request, response) {
 
-  const {courseId, semesterId} = request.query;
+  const { courseId, semesterId } = request.query;
 
   console.log("body ", courseId);
 
@@ -2070,12 +2079,18 @@ exports.getParentData = function (request, response) {
   chapters.chapter_content AS chapter_content,
   semester_tests.semester_tests_id,
   semester_tests.name AS semester_test_name,
+  semester_tests.time_limit_hours AS semester_tests_time_limit_hours,
+  semester_tests.time_limit_minutes AS semester_tests_time_limit_minutes,
+  semester_tests.number_of_questions AS semester_tests_number_of_questions,
   semester_tests.semester_tests_content AS semester_tests_content,
   sections.section_id,
   sections.name AS section_name,
   sections.content AS section_content,
   chapter_tests.chapter_tests_id,
   chapter_tests.name AS chapter_tests_name,
+  chapter_tests.time_limit_hours AS chapter_tests_time_limit_hours,
+  chapter_tests.time_limit_minutes AS chapter_tests_time_limit_minutes,
+  chapter_tests.number_of_questions AS chapter_tests_number_of_questions,
   chapter_tests.chapter_tests_content AS chapter_tests_content
 FROM 
   semesters
@@ -2105,20 +2120,22 @@ ORDER BY
       console.error("Error executing database query:", err);
       return response.status(500).json({ error: err.message });
     }
-    console.log("rows : " , rows);
+    console.log("rows : ", rows);
     if (rows.length === 1 && !rows[0].semester_id) {
       return response.json({ status: 'no data' });
     }
     // ------------------------------------------------------------------------------
     const semesters = {};
     rows.forEach(row => {
-      const { semester_id, semester_name, semester_content,chapter_id, chapter_name,chapter_content, semester_tests_id, semester_test_name,semester_tests_content, section_id, section_name,section_content, chapter_tests_id, chapter_tests_name ,chapter_tests_content} = row;
+      const { semester_id, semester_name, semester_content, chapter_id, chapter_name, chapter_content, semester_tests_id, semester_test_name, 
+        semester_tests_time_limit_hours,semester_tests_time_limit_minutes,semester_tests_number_of_questions,semester_tests_content, section_id, section_name, section_content, 
+        chapter_tests_id, chapter_tests_name,chapter_tests_time_limit_hours,chapter_tests_time_limit_minutes,chapter_tests_number_of_questions, chapter_tests_content } = row;
 
       if (!semesters[semester_id] && semester_id) {
         semesters[semester_id] = {
           id: semester_id,
           name: semester_name,
-          content:semester_content,
+          content: semester_content,
           chapters: {},
           semesterTest: {}
         };
@@ -2128,7 +2145,7 @@ ORDER BY
         semesters[semester_id].chapters[chapter_id] = {
           id: chapter_id,
           name: chapter_name,
-          content:chapter_content,
+          content: chapter_content,
           sections: [],
           chapterTest: []
         };
@@ -2138,39 +2155,79 @@ ORDER BY
         semesters[semester_id].semesterTest[semester_tests_id] = {
           id: semester_tests_id,
           name: semester_test_name,
-          content:semester_tests_content
+          timeLimit:{
+            hours:semester_tests_time_limit_hours || 1,
+            minutes:semester_tests_time_limit_minutes || 30
+          },
+          numberOfQuestions:semester_tests_number_of_questions || 5,
+          content: semester_tests_content || {slides:[{id:1234 , content:[{id:23 , type:'Quiz' , data:null}]}]}
         };
       }
 
-      if (section_id && section_name) {
-        semesters[semester_id].chapters[chapter_id].sections.push({
-          id: section_id,
-          name: section_name,
-          content:section_content
-        });
+      if (semesters[semester_id].chapters[chapter_id] && chapter_id) {
+        if (!semesters[semester_id].chapters[chapter_id].sections[section_id] && section_id) {
+          semesters[semester_id].chapters[chapter_id].sections[section_id] = {
+            id: section_id,
+            name: section_name,
+            content: section_content
+          }
+          console.log("section added", semesters[semester_id].chapters[chapter_id].sections[section_id]);
+        }
       }
 
-      if (chapter_tests_id && chapter_tests_name) {
-        semesters[semester_id].chapters[chapter_id].chapterTest.push({
-          id: chapter_tests_id,
-          name: chapter_tests_name,
-          content:chapter_tests_content
-        });
+      // if (section_id && section_name) {
+      //   semesters[semester_id].chapters[chapter_id].sections.push({
+      //     id: section_id,
+      //     name: section_name,
+      //     content: section_content
+      //   });
+      // }
+
+      if (semesters[semester_id].chapters[chapter_id] && chapter_id) { //if chapter is not present dont check to add tests
+        if (!semesters[semester_id].chapters[chapter_id].chapterTest[chapter_tests_id] && chapter_tests_id) {
+          semesters[semester_id].chapters[chapter_id].chapterTest[chapter_tests_id] = {
+            id: chapter_tests_id,
+            name: chapter_tests_name,
+            timeLimit:{
+              hours:chapter_tests_time_limit_hours || 1,
+              minutes:chapter_tests_time_limit_minutes || 30
+            },
+            numberOfQuestions:chapter_tests_number_of_questions || 5,
+            content: chapter_tests_content
+          }
+        }
       }
+      // if (chapter_tests_id && chapter_tests_name) {
+      //   semesters[semester_id].chapters[chapter_id].chapterTest.push({
+      //     id: chapter_tests_id,
+      //     name: chapter_tests_name,
+      //     content: chapter_tests_content
+      //   });
+      // }
     });
 
     // Convert semesters object into an array
     const result = Object.values(semesters).map(semester => {
-      semester.chapters = Object.values(semester.chapters);
+      semester.chapters = Object.values(semester.chapters).map(chapter => {
+        console.log("sections:", chapter.sections);
+        chapter.sections = Object.values(chapter.sections);
+        chapter.chapterTest = Object.values(chapter.chapterTest);
+        return chapter
+      })
       semester.semesterTest = Object.values(semester.semesterTest);
       return semester;
     });
+    
+    // const result = Object.values(semesters).map(semester => {
+    //   semester.chapters = Object.values(semester.chapters);
+    //   semester.semesterTest = Object.values(semester.semesterTest);
+    //   return semester;
+    // });
 
     // ------------------------------------------------------------------------------
-    if(result.length === 0){
-      return response.json({ statues: "no data" });
+    if (result.length === 0) {
+      return response.json({ status: "no data" });
     }
-    console.log("Student Details:", rows);
     response.json({ semesters: result });
   });
 };
@@ -2450,21 +2507,21 @@ exports.addChapterTest = function (request, response) {
 
 exports.addSemesterTest = function (request, response) {
   try {
-    const { name, semesterId } = request.body;
+    const { name, semesterId, content } = request.body;
 
     const connection =
       connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
 
     const insertQuery = `
-    INSERT INTO semester_tests (semester_id, name , time_limit_hours , time_limit_minutes , number_of_questions)
-    VALUES (?, ? , ?,?,?);
+    INSERT INTO semester_tests (semester_id, name , time_limit_hours , time_limit_minutes , number_of_questions , semester_tests_content)
+    VALUES (?, ? , ?,?,? , ?);
     `
     //by default we will populate the time limit columns and the no. of questions to display.
     const time_limit_hours = 1;
     const time_limit_minutes = 30;
     const number_of_questions = 5;
-
-    connection.query(insertQuery, [semesterId, name, time_limit_hours, time_limit_minutes, number_of_questions], (err, result) => {
+    const semester_tests_content = JSON.stringify(content);
+    connection.query(insertQuery, [semesterId, name, time_limit_hours, time_limit_minutes, number_of_questions , semester_tests_content], (err, result) => {
       if (err) {
         console.error("Error executing database query:", err);
         return response.status(500).json({ error: err.message });
@@ -2500,26 +2557,15 @@ exports.addSemesterTest = function (request, response) {
 //         response.json({ status: 'success' });
 //       });
 //     }
-    
+
 //   } catch (error) {
 //     console.error("Error:", error);
 //     response.status(500).json({ error: error.message });
 //   }
 // };
 
-exports.newSaveCourse = function (request, response) {
-  try {
-    const data = request.body.data;
-    const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
 
-    // Start transaction
-    connection.beginTransaction(function (err) {
-      if (err) {
-        console.error("Error starting transaction:", err);
-        return response.status(500).json({ error: err.message });
-      }
-
-      // //semester save 
+// //semester save 
       // connection.query(updateSemesterQuery, [contentString, semester.id], function (err, result) {
       //   console.log("semester query called");
       //   if (err) {
@@ -2543,13 +2589,22 @@ exports.newSaveCourse = function (request, response) {
       //         });
       //         return;
       //       }else{
-              
+
       //       }
       //     })
       //   }
       // })
+exports.newSaveCourse = function (request, response) {
+  try {
+    const data = request.body.data;
+    const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
 
- 
+    // Start transaction
+    connection.beginTransaction(function (err) {
+      if (err) {
+        console.error("Error starting transaction:", err);
+        return response.status(500).json({ error: err.message });
+      }
       // Iterate through semesters
       data.semesters.forEach(function (semester) {
         const contentString = JSON.stringify(semester.content);
@@ -2597,10 +2652,10 @@ exports.newSaveCourse = function (request, response) {
               }
 
               // Iterate through sections within the chapter
-              
+
               chapter.sections.forEach(function (section) {
                 console.log("semester query called");
-                console.log("section" , section);
+                console.log("section", section);
                 const sectionContentString = JSON.stringify(section.content);
 
                 // Update section content
@@ -2649,3 +2704,163 @@ exports.newSaveCourse = function (request, response) {
     response.status(500).json({ error: error.message });
   }
 };
+
+exports.getCourseInfo = function (request, response) {
+  const { courseId } = request.query;
+  console.log("body ", courseId);
+  const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+
+  const selectQuery = `
+  SELECT
+  c.course_name,
+  c.course_description,
+  s.subject_name
+  FROM
+    courses_info AS c
+  INNER JOIN
+    subjects_info AS s ON c.subject_id = s.subject_id
+  WHERE
+    c.course_id = ?;
+    `
+  connection.query(selectQuery, [courseId], (err, rows, fields) => {
+    connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(
+      connection
+    );
+
+    if (err) {
+      console.error("Error executing database query:", err);
+      return response.status(500).json({ error: err.message });
+    }
+
+    if (rows.length === 1) {
+      console.log("rows : ", rows, "and ", rows[0]);
+      response.json({ rows: rows[0] });
+    }
+
+  })
+};
+
+exports.finalSaveCourse = function (request, response) {
+  try {
+    const data = request.body.data;
+    const connection = connectionProvider.mysqlConnectionStringProvider.getMysqlConnection();
+    //data that we get in body
+    /*
+      {
+        semesters: [
+          {
+            id:,
+            name:,
+            content:,
+            chapters:[{ id,name,content,sections:[],chapterTest:[] },{ id,name,content,sections:[],chapterTest:[] },],
+            semesterTest:[]
+          } , {} , {}
+        ]
+      }
+      
+      for each object in chapters array 
+      we have multiple sections we want all those sections to be in an array 
+      [ { id,name,chapterId,content } , {section 2} , {section 3}].forEach( save all the sections with their respective foreign key i.e chapterId)
+      const finalSectionArray = [];
+      chapters.forEach((chapter)=>{
+        chapter.sections.forEach((section)=>{
+          let newSectionObj = {...section};
+          newSectionObj[chapterId] = chapter.id;
+          //append the above obj in the final array
+        })
+      })
+
+    */
+    const semester = data.semesters[0];
+    const contentString = JSON.stringify(semester.content);
+    const updateSemesterQuery = `
+      UPDATE semesters
+      SET semester_content = ?
+      WHERE semester_id = ?;
+    `;
+    connection.query(updateSemesterQuery, [contentString, semester.id], function (err, result) {
+      if (err) {
+        console.error("Error updating semester:", err);
+        connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+        return response.status(500).json({ error: err.message });
+      }
+      semester.chapters.forEach(function (chapter) {
+        const chapterContentString = JSON.stringify(chapter.content);
+        const updateChapterQuery = `
+            UPDATE chapters
+            SET chapter_content = ?
+            WHERE chapter_id = ?;
+          `;
+        connection.query(updateChapterQuery, [chapterContentString, chapter.id], function (err, result) {
+          if (err) {
+            console.error("Error updating chapter:", err);
+            connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+            return response.status(500).json({ error: err.message });
+          }
+        });
+      });
+
+      semester.semesterTest.forEach((semesterTest) => {
+        const semesterTestContentString = JSON.stringify(semesterTest.content);
+        const updateChapterQuery = `
+            UPDATE semester_tests
+            SET 
+            semester_tests_content = ?,
+            time_limit_hours = ?,
+            time_limit_minutes = ?,
+            number_of_questions = ?
+            WHERE semester_tests_id = ?;
+          `;
+        connection.query(updateChapterQuery, [semesterTestContentString, semesterTest.timeLimit.hours, semesterTest.timeLimit.minutes, semesterTest.numberOfQuestionToShow, semesterTest.id], function (err, result) {
+          if (err) {
+            console.error("Error updating chapter:", err);
+            connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+            return response.status(500).json({ error: err.message });
+          }
+        });
+      })
+
+      semester.chapters.forEach((chapter) => {
+        chapter.sections.forEach((section) => {
+          const sectionContentString = JSON.stringify(section.content);
+          const updateSectionQuery = `
+              UPDATE sections
+              SET content = ?
+              WHERE section_id = ?;
+            `;
+          connection.query(updateSectionQuery, [sectionContentString, section.id], function (err, result) {
+            if (err) {
+              console.error("Error updating chapter:", err);
+              connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+              return response.status(500).json({ error: err.message });
+            }
+          });
+        })
+      })
+
+      semester.chapters.forEach((chapter) => {
+        chapter.chapterTest.forEach((chapterTest) => {
+          const chapterTestContentString = JSON.stringify(chapterTest.content);
+          const updateChapterTestQuery = `
+              UPDATE chapter_tests
+              SET chapter_tests_content = ?
+              WHERE chapter_tests_id = ?;
+            `;
+          connection.query(updateChapterTestQuery, [chapterTestContentString, chapterTest.id], function (err, result) {
+            if (err) {
+              console.error("Error updating chapter:", err);
+              connectionProvider.mysqlConnectionStringProvider.closeMysqlConnection(connection);
+              return response.status(500).json({ error: err.message });
+            }
+          });
+        })
+      })
+      //both chapters and semesteTests will be saved at this point or not  
+      // Update sections for the current chapter sequentially
+      response.json({status:'success'});
+    });
+  } catch (error) {
+    console.error("Error:", error);
+  }
+};
+
