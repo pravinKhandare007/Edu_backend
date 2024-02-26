@@ -69,8 +69,7 @@ const cookieDecoder = (req, res, next) => {
     } else {
         res.sendStatus(401);
     }
-}
-    ;
+};
 // Mount the routes under the '/api' path
 app.use('/api', routes);
 

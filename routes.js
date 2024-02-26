@@ -1,6 +1,116 @@
 const express = require("express");
 const router = express.Router();
 const userDao = require("./server/Dao/usersDao.js");
+const multer = require("multer");
+const path = require("path");
+
+// Set up multer storage
+// const storage = multer.memoryStorage(); // You can adjust storage as per your requirements
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "./server/uploads/"));
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+//multi image upload code testing 
+const storage2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "./server/uploads/"));
+  },
+  filename: function (req, file, cb) { 
+    console.log('rew sadf' , req.body);
+    cb(null, Date.now() + "-"  + path.extname(file.originalname));
+  },
+});
+
+const testingUpload = multer({ storage: storage2 });
+
+const existingUpload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 5, // 5 MB limit (adjust as needed)
+  },
+});
+
+/////////////////////////////////////////
+//--------- S3 Bucket-----------------
+/////////////////////////////////////////
+
+router.post(
+  "/upload-profile-image/:userId",
+  existingUpload.single("image"),
+  async (req, res) => {
+    console.log("Received request to /upload-profile-image/:userId");
+
+    try {
+      // Extract the userId from the URL parameters
+      const userId = req.params.userId;
+      console.log("User ID:", userId);
+
+      // Call the uploadProfileImage function in userDao.js
+      await userDao.uploadProfileImage(req, res);
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
+
+router.put(
+  "/update-profile-image/:userId",
+  existingUpload.single("image"),
+  async (req, res) => {
+    console.log("Received request to /update-profile-image/:userId");
+
+    try {
+      // Extract the userId from the URL parameters
+      const userId = req.params.userId;
+      console.log("User ID:", userId);
+
+      // Call the updateProfileImage function in userDao.js
+      await userDao.updateProfileImage(req, res);
+    } catch (error) {
+      console.error("Error updating profile image:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
+
+router.get("/retrieve-profile-image/:userId", async (req, res) => {
+  console.log("Received request to /retrieve-profile-image/:userId");
+
+  try {
+    // Extract the userId from the URL parameters
+    const userId = req.params.userId;
+    console.log("User ID:", userId);
+
+    // Call the retrieveProfileImage function in userDao.js
+    await userDao.retrieveProfileImage(req, res);
+  } catch (error) {
+    console.error("Error retrieving profile image:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.delete("/delete-profile-image/:userId", async (req, res) => {
+  console.log("Received request to /delete-profile-image/:userId");
+
+  try {
+    // Extract the userId from the URL parameters
+    const userId = req.params.userId;
+    console.log("User ID:", userId);
+
+    // Call the deleteProfileImage function in userDao.js
+    await userDao.deleteProfileImage(req, res);
+  } catch (error) {
+    console.error("Error deleting profile image:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 router.post("/check-email-exists", async (req, res) => {
   try {
@@ -261,7 +371,7 @@ router.post('/create-course', async (req, res) => {
   }
 });
 
-router.post('/save-course', async (req, res) => {
+router.post('/save-course', testingUpload.array('images') , async (req, res) => {
   console.log('Received request to /api/save-course');
   try {
     await userDao.finalSaveCourse(req, res);
@@ -357,6 +467,148 @@ router.get('/fetch-course-info', async (req, res) => {
   console.log('Received request to /api/fetch course info');
   try {
     await userDao.getCourseInfo(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.put('/edit-semester-name', async (req, res) => {
+  console.log('Received request to /api/edit semester name ');
+  try {
+    await userDao.editSemesterName(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.put('/edit-chapter-name', async (req, res) => {
+  console.log('Received request to /api/edit chapter name ');
+  try {
+    await userDao.editChapterName(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+router.put('/edit-section-name', async (req, res) => {
+  console.log('Received request to /api/edit section name ');
+  try {
+    await userDao.editSectionName(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.put('/edit-chapterTest-name', async (req, res) => {
+  console.log('Received request to /api/edit chapterTest name ');
+  try {
+    await userDao.editChapterTestName(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.put('/edit-semesterTest-name', async (req, res) => {
+  console.log('Received request to /api/edit semesterTest name ');
+  try {
+    await userDao.editSemesterTestName(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+router.delete('/delete-semesterTest', async (req, res) => {
+  console.log('Received request to /api/delete semesterTest');
+  try {
+    await userDao.deleteSemesterTest(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.delete('/delete-chapterTest', async (req, res) => {
+  console.log('Received request to /api/delete chapterTest');
+  try {
+    await userDao.deleteChapterTest(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.delete('/delete-section', async (req, res) => {
+  console.log('Received request to /api/delete chapterTest');
+  try {
+    await userDao.deleteSection(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.delete('/delete-semester',userDao.deleteSemesterImages ,async (req, res) => {
+  console.log('Received request to /api/delete semester');
+  try {
+    await userDao.deleteSemester(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.delete('/delete-chapter', userDao.deleteChapterImages ,async (req, res) => {
+  console.log('Received request to /api/delete chapter');
+  try {
+    await userDao.deleteChapter(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.delete('/delete-course', userDao.deleteCourseImages,async (req, res) => {
+  console.log('Received request to /api/delete course');
+  try {
+    await userDao.deleteCourse(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+ 
+router.get('/get-image' , async (req, res) => {
+  console.log('Received request to /api/delete course');
+  try {
+    await userDao.retrieveImage(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+})
+
+router.delete('/delete-image', async (req, res) => {
+  console.log('Received request to /api/delete image');
+  try {
+    await userDao.deleteImage(req, res);
+  } catch (error) {
+    console.error('Error saving course:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+ 
+router.post('/delete-image-bulk', async (req, res) => {
+  console.log('Received request to /api/delete image bulk');
+  try {
+    await userDao.bulkImageDelete(req, res);
   } catch (error) {
     console.error('Error saving course:', error);
     res.status(500).json({ error: 'Internal Server Error' });
